@@ -45,7 +45,7 @@ class UserController extends Controller
             } else {
 
                 // Cifrar la contraseña
-                $pwd = password_hash($params->password, PASSWORD_BCRYPT, ['cost' => 4]);
+                $pwd = hash('sha256', $params->password);
 
                 // Crear el usuario
                 $user = new User();
@@ -89,9 +89,101 @@ class UserController extends Controller
 
         $jwtAuth = new \JwtAuth();
 
-       echo $jwtAuth->singup();
+        // Recibir los datos por post
+        $json           = $request->getContent();
+        $params         = json_decode($json);
+        $params_array   = json_decode($json, true);
 
-        return "Login del usuario";
+        // Validar datos
+        $validate = \Validator::make($params_array, [
+
+            'email'     => 'required|email', // Comprobar si el usuario existe
+            'password'  => 'required'
+        ]);
+
+        if ($validate->fails()) {
+
+            $signup = array(
+                'status'  => 'error',
+                'code'    => 404,
+                'message' => 'El usuario no se ha podido loguear',
+                'errors'  => $validate->errors()
+            );
+
+        
+        } else {
+            // Cifrar contraseña
+            $pwd = hash('sha256', $params->password);
+
+            // Devolver token o datos
+            $signup = $jwtAuth->singup($params->email, $pwd);
+            if(!empty($params->getToken)){
+                $signup = $jwtAuth->singup($params->email, $pwd, true);
+            }
+        }
+
+        return response()->json($signup, 200);
+    }
+
+    public function update(Request $request) {
+        
+        // Comprobar si el usuario esta identificado
+        $token = $request->header('Authorization');
+
+        $jwtAuth = new \JwtAuth();
+        $checkToken = $jwtAuth->checkToken($token);
+
+        // Recoger los datos
+        $json = $request->getContent();
+        $params_array = json_decode($json, true);
+
+        if ($checkToken && !empty($params_array)) {
+
+            // Sacar el usuario identifcado
+            $user = $jwtAuth->checkToken($token, true);
+
+            // Validar los datos
+            $validate = \Validator::make($params_array, [
+                'name'      => 'required|alpha',
+                'surname'   => 'required|alpha',
+                'email'     => 'required|email|unique:users,'.$user->sub, // Comprobar si el usuario existe
+
+            ]);
+
+            // Quitar los campos que no quiero actualizar
+            unset($params_array['id']);
+            unset($params_array['role']);
+            unset($params_array['password']);
+            unset($params_array['created_at']);
+            unset($params_array['remember_token']);
+
+            // Actualizar el usuario
+            $userUpdate = User::where('id', $user->sub)->update($params_array);
+            $data = array(
+                'status'  => 'success',
+                'code'    => 200,
+                'user' => $userUpdate,
+            );
+
+        } else {
+            $data = array(
+                'status'  => 'error',
+                'code'    => 404,
+                'message' => 'El usuario no esta identificado correctamente',
+            );
+        }
+
+        return response()->json($data, $data['code']);
+    }
+
+    public function upload(Request $request) {
+        $data = array(
+            'status'  => 'error',
+            'code'    => 404,
+            'message' => 'El usuario no esta identificado correctamente',
+        );
+
+        return response()->json($data, $data['code'])->header('Content-Type', 'text/plain');
     }
 
 
