@@ -1,5 +1,9 @@
 <?php
 
+// Cargar clases
+use \App\Http\Middleware\ApiAuthMiddleware;
+
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -40,4 +44,6 @@ Route::get('/post/prueba', 'PostController@pruebas');
 Route::post('/api/register', 'UserController@registro');
 Route::post('/api/login', 'UserController@login');
 Route::put('/api/user_update', 'UserController@update');
-Route::post('api/user/upload', 'UserController@upload');
+Route::post('api/user/upload', 'UserController@upload')->middleware(ApiAuthMiddleware::class);
+Route::get('/api/user/avatar/{filename}', 'UserController@getImage');
+Route::get('/api/user/detail/{id}', 'UserController@detail');
