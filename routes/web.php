@@ -50,3 +50,6 @@ Route::get('/api/user/detail/{id}', 'UserController@detail');
 
 //Rutas de categorias
 Route::resource('/api/category', 'CategoryController');
+
+//Rutas de post
+Route::resource('/api/post', 'PostController');
